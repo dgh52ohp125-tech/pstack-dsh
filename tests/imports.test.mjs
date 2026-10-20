@@ -2,11 +2,12 @@
 // 2. The entry point exposes the plugin contract the host calls.
 // 3. No source module still carries a type-only import that survived stripping.
 import { readdirSync, readFileSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { join, dirname } from 'node:path'
+import { pathToFileURL, fileURLToPath } from 'node:url'
 import { pluginDir } from './plugin.mjs'
 import { check, equal, summary, results } from './assert.mjs'
 
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const libDir = join(pluginDir, 'lib')
 const modules = existsSync(libDir)
   ? readdirSync(libDir).filter(name => name.endsWith('.js') && name !== 'client.js' && !name.startsWith('client.')).sort()
@@ -33,7 +34,13 @@ check('entry exports inject as a service list', Array.isArray(entry.inject) && e
 equal('plugin name is pstack-dsh', entry.name, 'pstack-dsh')
 
 // Client bundle is shipped, not rebuilt by this fork — it must still be present.
-check('client bundle preserved', existsSync(join(libDir, 'client.js')), 'lib/client.js')
+// Checked in BOTH trees on purpose. The deployed check catches a build that
+// deleted it (which happened: the build wiped lib/ and read the bundle from a
+// path that no longer existed). The repo check catches the other half: a clone
+// ships whatever is committed, so the bundle must be in git or a fresh install
+// has no Settings UI even though the local tree looks fine.
+check('client bundle preserved in the deployed plugin', existsSync(join(libDir, 'client.js')), 'lib/client.js')
+check('client bundle is committed, so a clone has one too', existsSync(join(repoRoot, 'lib', 'client.js')), 'lib/client.js in the repo')
 
 // No emitted module may still import a `.ts` specifier: that only resolves under
 // Node's type stripping, never in the host's loader.

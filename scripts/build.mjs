@@ -28,6 +28,25 @@ function buildFile(name) {
   return rewriteSpecifiers(stripped)
 }
 
+// The shipped client bundle is a build artifact of upstream's own client
+// pipeline and cannot be regenerated here, so it has to survive the wipe below.
+// Two bugs lived here: the bundle was read from `<root>/lib.client.js`, which was
+// later moved to `lib/client.js`; and the read happened AFTER the directory
+// holding it had been deleted. Either one alone silently produced a plugin whose
+// Settings UI could not load — the build still reported success. So: capture the
+// bytes before wiping, from wherever the file currently lives, and fail the build
+// if there is nothing to capture.
+function captureFirst(candidates) {
+  for (const rel of candidates) {
+    const file = join(root, rel)
+    if (existsSync(file)) return { file, bytes: readFileSync(file) }
+  }
+  return undefined
+}
+
+const client = captureFirst(['lib/client.js', 'client.js', 'lib.client.js'])
+const clientMap = captureFirst(['lib/client.js.map', 'client.js.map'])
+
 rmSync(outDir, { recursive: true, force: true })
 mkdirSync(outDir, { recursive: true })
 
@@ -42,11 +61,8 @@ for (const name of sources) {
   }
 }
 
-// Preserve the shipped client bundle: this fork changes host behaviour only.
-const shippedClient = join(root, 'lib.client.js')
-if (existsSync(shippedClient)) {
-  writeFileSync(join(outDir, 'client.js'), readFileSync(shippedClient))
-}
+if (client !== undefined) writeFileSync(join(outDir, 'client.js'), client.bytes)
+if (clientMap !== undefined) writeFileSync(join(outDir, 'client.js.map'), clientMap.bytes)
 
 // Re-parse every emitted file through the same TypeScript parser. This proves
 // the rewrite produced syntactically valid ESM. Bare `@deepseek-ai/*` imports
@@ -67,6 +83,14 @@ console.log(JSON.stringify({
   failures,
   syntaxChecked: sources.length - parseFailures.length,
   parseFailures,
+  client: client === undefined ? 'MISSING' : `${client.file} → lib/client.js`,
+  clientMap: clientMap === undefined ? 'MISSING' : `${clientMap.file} → lib/client.js.map`,
 }, null, 2))
 
-if (failures.length > 0 || parseFailures.length > 0) process.exitCode = 1
+// A build with no client bundle is a broken build even though every host module
+// compiled: the plugin mounts, its tools answer, and the Settings page 404s.
+if (client === undefined) {
+  console.error('build: no client bundle found. Looked for lib/client.js, client.js, lib.client.js.')
+  console.error('build: restore it from the published pstack-dsh package; this fork cannot regenerate it.')
+}
+if (failures.length > 0 || parseFailures.length > 0 || client === undefined) process.exitCode = 1
