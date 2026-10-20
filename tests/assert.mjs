@@ -7,8 +7,9 @@ export function check(name, ok, detail) {
   return ok === true
 }
 
-export function equal(name, actual, expected) {
-  return check(name, actual === expected, `expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`)
+export function equal(name, actual, expected, detail) {
+  const base = `expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`
+  return check(name, actual === expected, detail === undefined || actual === expected ? base : `${base} — ${detail}`)
 }
 
 export function deepEqual(name, actual, expected) {

@@ -22,6 +22,9 @@ const groups = [
   { name: 'spawn', kind: 'test', file: join(here, 'spawn.test.mjs') },
   { name: 'skills', kind: 'test', file: join(here, 'skills.test.mjs') },
   { name: 'seam', kind: 'test', file: join(here, 'seam.test.mjs') },
+  // Reads the REAL `$DSH_HOME/pstack-dsh.json`, so it also covers what the three
+  // hand-run scripts in the old `pstack-verify/` folder used to check.
+  { name: 'live', kind: 'test', file: join(here, 'live.test.mjs') },
 ]
 
 const skipDeploy = process.argv.includes('--no-deploy')
