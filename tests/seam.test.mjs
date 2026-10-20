@@ -1,4 +1,4 @@
-// A re-sync must reproduce the installed skills tree exactly.
+// A re-sync must reproduce the committed skills tree exactly.
 //
 // This is the property that makes upstream updates cheap. If upstream releases
 // pstack 0.16, the maintenance move is: point `--upstream` at the new tree, run
@@ -6,19 +6,20 @@
 // moment a hand edit exists that overrides/ does not describe, that move
 // silently loses work — which is how the previous fork ended up 64 commits
 // behind. So the test is: sync from upstream into a temp dir and compare it to
-// what is installed, byte for byte.
+// what is committed, byte for byte.
+//
+// The upstream tree is not vendored, so on a machine that has no copy of it this
+// check cannot run. It reports a skip rather than pretending to pass.
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
-import { pluginDir } from './plugin.mjs'
 import { check, equal, summary, results } from './assert.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const upstream = process.env.PSTACK_UPSTREAM
-  ?? 'C:/Users/User/Desktop/nothing2/scratch/open-pstack/plugins/pstack/skills'
-const installed = join(pluginDir, 'skills')
+  ?? join(root, 'upstream', 'skills')
 
 function walk(dir) {
   const files = {}
@@ -41,9 +42,22 @@ const overrides = existsSync(overridesDir) ? Object.keys(walk(overridesDir)) : [
 check('overrides/ describes the seam', overrides.length >= 12, `${overrides.length} override files`)
 check('the DSH reference is captured as an override', overrides.some(rel => rel.endsWith('dsh-tools.md')), overrides.join(','))
 
-// The re-sync itself.
+// skills/ is committed, because the harness loads skills from `<plugin>/skills`
+// and a clone without them installs a plugin that answers nothing. That is a
+// packaging property, so assert it on the repo tree itself, not the deployed one
+// — the deployed copy would hide a missing directory in git.
+const repoSkills = walk(join(root, 'skills'))
+check('the repo ships a skills tree, so a clone can answer', Object.keys(repoSkills).length > 100, `${Object.keys(repoSkills).length} files`)
+check('a spot-check skill is present', 'poteto-mode/SKILL.md' in repoSkills, Object.keys(repoSkills).slice(0, 3).join(', '))
+
+// The re-sync itself. It compares the committed tree to what upstream produces,
+// so it is the guard that replaces "keep skills/ out of git": a hand edit to a
+// mirrored skill now fails here instead of being uncommittable. It needs the
+// upstream tree, which is not vendored — a clone on another machine must still
+// be able to run the suite, so an absent upstream is a skip with a reason, not a
+// pass and not a failure.
 if (!existsSync(upstream)) {
-  check('upstream tree is available for the re-sync check', false, `missing ${upstream}`)
+  check('upstream tree is available for the re-sync check', false, `skipped, not run: missing ${upstream} (set PSTACK_UPSTREAM to a pstack skills tree to enable this check)`)
 } else {
   const temp = mkdtempSync(join(tmpdir(), 'pstack-resync-'))
   const dest = join(temp, 'skills')
@@ -58,16 +72,18 @@ if (!existsSync(upstream)) {
     check('re-sync leaves validation clean', run.stdout.includes('validation            = clean'), run.stdout.trim().split('\n').slice(-2).join(' | '))
 
     const fresh = walk(dest)
-    const live = walk(installed)
-    const onlyFresh = Object.keys(fresh).filter(rel => !(rel in live))
-    const onlyLive = Object.keys(live).filter(rel => !(rel in fresh))
-    const differing = Object.keys(fresh).filter(rel => rel in live && !fresh[rel].equals(live[rel]))
+    // Compare against the committed tree, not the deployed one: the committed
+    // tree is what a clone installs, so it is the thing that must be reproducible.
+    const committed = repoSkills
+    const onlyFresh = Object.keys(fresh).filter(rel => !(rel in committed))
+    const onlyCommitted = Object.keys(committed).filter(rel => !(rel in fresh))
+    const differing = Object.keys(fresh).filter(rel => rel in committed && !fresh[rel].equals(committed[rel]))
 
     equal('re-sync produces no extra files', onlyFresh.length, 0)
     if (onlyFresh.length > 0) check('extra files', false, onlyFresh.slice(0, 8).join(', '))
-    equal('re-sync produces no missing files', onlyLive.length, 0)
-    if (onlyLive.length > 0) check('missing files', false, onlyLive.slice(0, 8).join(', '))
-    equal('re-sync reproduces every file byte-for-byte', differing.length, 0)
+    equal('re-sync produces no missing files', onlyCommitted.length, 0)
+    if (onlyCommitted.length > 0) check('missing files', false, onlyCommitted.slice(0, 8).join(', '))
+    equal('re-sync reproduces every committed file byte-for-byte', differing.length, 0)
     if (differing.length > 0) check('differing files', false, differing.slice(0, 8).join(', '))
     check('the synced tree is not trivially empty', Object.keys(fresh).length > 100, `${Object.keys(fresh).length} files`)
   }
