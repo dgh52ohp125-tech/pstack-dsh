@@ -1,0 +1,11 @@
+--- a/automate-me/SKILL.md
++++ b/automate-me/SKILL.md
+@@ -9,7 +9,7 @@
+ 
+ This skill orchestrates three others: an inline mining pass (see step 1), the `plugin-dev:skill-development` skill (authoring), and the **unslop** skill (prose discipline). It sequences them. It doesn't replace them.
+ 
+-**Platform note.** On Codex or another non-Claude runtime, the Claude tool names, `claude-*` slugs, and Claude built-in skills named below (including `plugin-dev:skill-development`) are Claude defaults. Resolve them via [`codex-tools.md`](../poteto-mode/references/codex-tools.md).
++**Platform note.** On Codex or another non-Claude runtime, the Claude tool names, `claude-*` slugs, and Claude built-in skills named below (including `plugin-dev:skill-development`) are Claude defaults. On Codex resolve them via [`codex-tools.md`](../poteto-mode/references/codex-tools.md); on DeepSeek Harness resolve them via [`dsh-tools.md`](../poteto-mode/references/dsh-tools.md).
+ 
+ ## Flow
+ 

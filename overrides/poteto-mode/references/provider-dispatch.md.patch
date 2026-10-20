@@ -1,0 +1,18 @@
+--- a/poteto-mode/references/provider-dispatch.md
++++ b/poteto-mode/references/provider-dispatch.md
+@@ -37,6 +37,7 @@
+ |---|---|---|---|
+ | Claude Code | native `Agent` | external runner | external runner |
+ | Codex | external runner | native `spawn_agent` | external runner |
++| DeepSeek Harness | `pstack_spawn` on a mapped claude route | `pstack_spawn` on a mapped codex route | `pstack_spawn` on a mapped grok route |
+ 
+ `inherit-parent` and `auto` remain aliases. They use the parent's current model and effort through its native subagent primitive. In a panel they still consume one lane, but they reduce provider diversity; say so in the synthesis record.
+ 
+@@ -46,6 +47,7 @@
+ 
+ - Claude Code: match the descriptor's `(provider, model)` to one model-matrix row, then dispatch it through `pstack-<stem>-<effort>` using that row's Claude-native agent stem and the descriptor's effort. Those definitions select the rolling model alias, requested effort, and `background: true`. `pstack-fable-max` and `pstack-opus-xhigh` remain in that set. Pass the complete task, grounding paths, access mode, and unique output location in the `Agent` prompt. Retain the task handle and drain it only after fan-out.
+ - Codex: call `spawn_agent` with the descriptor's model and `reasoning_effort`, the complete task, grounding paths, access mode, and unique output location. Use an isolated worktree for a writer. Codex subagents already run concurrently.
++- DeepSeek Harness: call `pstack_spawn` with `role`, `prompt`, an optional `run_in_background`, and `route_index` for a panel lane. Never send model, provider, effort, or `subagent_type`: `$DSH_HOME/pstack-dsh.json` carries the route and effort per role, and DSH rejects those fields. A role set to `inherit: true` runs on the parent route. When the overlay maps no route for the role, the child inherits the parent, which is a working configuration rather than a failure. DSH has no isolated-worktree argument, so the parent creates the worktree with `git worktree add` and names the path in the prompt. See [`dsh-tools.md`](dsh-tools.md).
+ 
+ Do not send a same-provider descriptor to the external runner. It rejects that call because the native route is cheaper and already available.
+ 

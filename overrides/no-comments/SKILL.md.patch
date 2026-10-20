@@ -1,0 +1,11 @@
+--- a/no-comments/SKILL.md
++++ b/no-comments/SKILL.md
+@@ -9,7 +9,7 @@
+ 
+ Defer to comment-sicko's fresh perspective.
+ 
+-**Platform note.** On Codex or another non-Claude runtime, the `comment-sicko` subagent and the Claude tool names below are Claude defaults. Resolve them via [`codex-tools.md`](../poteto-mode/references/codex-tools.md).
++**Platform note.** On Codex or another non-Claude runtime, the `comment-sicko` subagent and the Claude tool names below are Claude defaults. On Codex resolve them via [`codex-tools.md`](../poteto-mode/references/codex-tools.md); on DeepSeek Harness resolve them via [`dsh-tools.md`](../poteto-mode/references/dsh-tools.md).
+ 
+ ## Scope
+ 
