@@ -55,16 +55,24 @@ Both are fixed here, and both have regression tests.
 
 ## Install
 
-`lib/` ships built, but `skills/` does not. Both steps are needed for a first
-install:
+The repo is self-contained: `lib/` and `skills/` are both committed, so a
+clone installs a working plugin with no build step and no sync.
+
+**From GitHub (recommended).** Pin a commit, not the branch — a moving branch
+would let an unrelated upstream change alter the running harness unasked:
 
 ```powershell
-# 1. Mirror upstream prose and replay the seam
-python sync-skills.py --upstream <upstream-pstack>/skills
+dsh plugin --profile <profile> add "git+https://github.com/dgh52ohp125-tech/pstack-dsh.git#<sha>"
+```
 
-# 2. Compile and install into the profile's plugin directory
-node scripts/build.mjs
-node scripts/deploy.mjs
+`dsh plugin` forwards its arguments to pnpm, so any spec pnpm accepts works.
+pnpm records the resolved tarball and integrity hash in `pnpm-lock.yaml`.
+
+**From a working checkout**, to iterate on the plugin itself:
+
+```powershell
+node scripts/build.mjs     # compiles src/ into lib/
+node scripts/deploy.mjs    # copies the build into a profile's plugin directory
 ```
 
 Deploy backs up the previous `lib/` to `lib.backup-<timestamp>`, keeps
@@ -102,7 +110,7 @@ npm run test:keep # skip the deploy step
 ```
 
 Groups: `build`, `deploy`, `imports`, `catalog`, `overlay`, `spawn`, `skills`,
-`seam`, `live` — 97 checks. The `live` group reads your real
+`seam`, `live` — 100 checks. The `live` group reads your real
 `$DSH_HOME/pstack-dsh.json` and the provider data this machine ships, so it fails
 when a real role points at a route or an effort the machine cannot serve.
 `npm run test:keep` runs everything except `deploy`.
@@ -110,9 +118,10 @@ when a real role points at a route or an effort the machine cannot serve.
 Tests load the **deployed** tree, not `src/`, because the loader resolves bare
 `@deepseek-ai/*` specifiers only from inside the profile's `node_modules`.
 
-A fresh clone is enough to run them: `lib/` is committed, and `skills/` is
-optional — the `seam` group rebuilds it from upstream when
-`PSTACK_UPSTREAM` points at a tree.
+A fresh clone is enough to run them: `lib/` and `skills/` are both committed.
+The `seam` group compares the committed `skills/` tree against upstream when
+`PSTACK_UPSTREAM` (or the local `upstream` junction) points at one, and reports
+`skipped, not run` rather than passing silently when neither is present.
 
 ## Environment notes
 
@@ -134,3 +143,8 @@ optional — the `seam` group rebuilds it from upstream when
   exclusively. Verify against a separate profile
   (`dsh plugin --profile <name> add link:<this repo>`), which mounts this repo
   through `cordis.patch.yml`.
+- The desktop profile can still be changed, just not through `dsh plugin`: edit
+  `$DSH_HOME/profiles/desktop/package.json` and run `pnpm install` in that
+  directory. `dsh plugin` is a thin `pnpm` forwarder, so the result is the same
+  install. Restart the app afterwards — the host holds the old module in memory
+  and a file on disk is inert until then.
