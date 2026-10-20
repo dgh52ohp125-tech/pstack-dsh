@@ -134,3 +134,9 @@ optional — the `seam` group rebuilds it from upstream when
   exclusively. Verify against a separate profile
   (`dsh plugin --profile <name> add link:<this repo>`), which mounts this repo
   through `cordis.patch.yml`.
+
+## Proof of posting
+
+This branch exists to verify that a review can actually reach GitHub: create the
+PR, run the review against it, confirm the comment lands. A review pipeline that
+has never posted is untested, no matter how many local runs pass.
