@@ -49,7 +49,7 @@ Both are fixed here, and both have regression tests.
 | `agents/` | Persona files, mirrored from upstream and committed. |
 | `scripts/build.mjs` | Compile `src/*.ts` → `lib/*.js`. No dependencies, no network. |
 | `scripts/deploy.mjs` | Install the build into a DSH profile plugin directory. |
-| `tests/` | 83 checks over catalog, overlay, spawn, skills, seam and imports. |
+| `tests/` | 97 checks over catalog, overlay, spawn, skills, seam, imports and the live overlay. |
 | `capture-seam.py` | Record the local edits to upstream prose as `overrides/`. |
 | `sync-skills.py` | Rebuild `skills/` from upstream plus `overrides/`. |
 
@@ -101,15 +101,33 @@ npm test          # build, deploy, then run every group
 npm run test:keep # skip the deploy step
 ```
 
-Groups: `imports`, `catalog`, `overlay`, `spawn`, `skills`, `seam`, `verify`.
+Groups: `build`, `deploy`, `imports`, `catalog`, `overlay`, `spawn`, `skills`,
+`seam`, `live` — 97 checks. The `live` group reads your real
+`$DSH_HOME/pstack-dsh.json` and the provider data this machine ships, so it fails
+when a real role points at a route or an effort the machine cannot serve.
+`npm run test:keep` runs everything except `deploy`.
+
 Tests load the **deployed** tree, not `src/`, because the loader resolves bare
 `@deepseek-ai/*` specifiers only from inside the profile's `node_modules`.
+
+A fresh clone is enough to run them: `lib/` is committed, and `skills/` is
+optional — the `seam` group rebuilds it from upstream when
+`PSTACK_UPSTREAM` points at a tree.
 
 ## Environment notes
 
 - `node_modules/@deepseek-ai` in this repo is a **junction** to the DSH runtime
   scope. It makes bare specifiers resolve from the repo root, and it is
-  machine-specific — never committed.
+  machine-specific — never committed. To recreate it:
+
+  ```powershell
+  New-Item -ItemType Junction -Path node_modules\@deepseek-ai `
+    -Target "<DSH runtime>\node_modules\@deepseek-ai"
+  ```
+
+- `overrides/*.patch` are unified diffs against LF files. `.gitattributes` pins
+  them to `eol=lf`; without it a Windows checkout turns them into CRLF and
+  `sync-skills.py` fails with `patch does not apply` — but only in a fresh clone.
 - `dotenv`-style `.env` files are not read. Configuration lives in
   `$DSH_HOME/pstack-dsh.json` for role routing.
 - `dsh --profile desktop` is refused; the Electron app owns that profile
