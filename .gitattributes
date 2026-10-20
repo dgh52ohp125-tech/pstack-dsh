@@ -1,0 +1,21 @@
+# These files are not interchangeable between line endings.
+#
+# `overrides/*.patch` are unified diffs with three lines of context. Git on
+# Windows defaults to converting text to CRLF on checkout; a diff converted that
+# way no longer applies to the LF tree it was generated from, and `git apply`
+# fails with "patch does not apply". The seam test catches it, but the failure
+# only shows up in a fresh clone — exactly the situation a sync happens in.
+#
+# `sync-skills.py` renormalises to LF as a second guard, so either alone would
+# be enough. Both are cheap and they fail differently.
+*.patch text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+*.mjs text eol=lf
+*.ts text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+
+# Built output is compared byte-for-byte by the seam test.
+lib/** -text
