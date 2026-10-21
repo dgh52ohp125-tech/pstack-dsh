@@ -2,7 +2,7 @@
   "$comment": "The upstream prose this fork was last synced to. scripts/check-upstream.mjs compares this to the live cursor/plugins manifest; tests/upstream.test.mjs fails if the tree, the README or these numbers disagree. Update this file only as part of a real sync.",
   "repo": "cursor/plugins",
   "path": "pstack",
-  "version": "0.15.29",
+  "version": "0.15.20",
   "syncedAt": "2026-10-21",
   "skillDirs": 63,
   "skillFiles": 162,
