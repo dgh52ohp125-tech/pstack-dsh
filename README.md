@@ -49,7 +49,7 @@ Both are fixed here, and both have regression tests.
 | `agents/` | Persona files, mirrored from upstream and committed. |
 | `scripts/build.mjs` | Compile `src/*.ts` → `lib/*.js`. No dependencies, no network. |
 | `scripts/deploy.mjs` | Install the build into a DSH profile plugin directory. |
-| `tests/` | 156 checks over catalog, overlay, spawn, the host API contract, skills, seam, upstream and the live overlay. |
+| `tests/` | 142 checks by default (`npm test`) over catalog, overlay, spawn, the host API contract, skills, seam and upstream; 156 with `npm run test:live`, which adds this machine and its real overlay. |
 | `capture-seam.py` | Record the local edits to upstream prose as `overrides/`. |
 | `sync-skills.py` | Rebuild `skills/` from upstream plus `overrides/`. |
 | `upstream.json` | The upstream release this tree was synced to. `check-upstream` and the `upstream` test group both read it. |
