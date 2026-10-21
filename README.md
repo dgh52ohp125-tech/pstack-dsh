@@ -157,21 +157,25 @@ npm run test:keep # skip the deploy step
 ```
 
 Groups: `build`, `deploy`, `imports`, `catalog`, `overlay`, `spawn`, `contract`,
-`skills`, `seam`, `upstream`, `live` — 156 checks. The `live` group reads your real
-`$DSH_HOME/pstack-dsh.json` and the provider data this machine ships, so it fails
-when a real role points at a route or an effort the machine cannot serve.
-`npm run test:keep` runs everything except `deploy`.
+`skills`, `seam`, `upstream` — 142 checks in about three seconds, all offline, all
+passing on any machine.
+
+The `live` group is **opt-in** (`npm run test:live`, 156 checks): it reads your
+real `$DSH_HOME/pstack-dsh.json`, loads the provider data this machine ships, and
+spawns actual children, so it fails when a real role points at a route or an
+effort the machine cannot serve. That is the question it exists to answer, which
+is why it is not in the default run — a fresh clone has no overlay and no
+provider data, and a suite that is red by default teaches people to ignore red.
 
 A check whose input is genuinely optional reports as **skipped** — not failed,
 not passed. A fresh clone has no `upstream/` tree, so the byte-for-byte re-sync
 check reports `checksSkipped: 1` with its reason instead of turning the suite red.
 
-The `live` group is the deliberate exception, and **it fails on a machine that is
-not configured**. It validates that every role points at a provider, model and
-effort this machine can actually serve — a check that is worth nothing if it
-quietly retires itself. Run `npm test` on a fresh machine and it goes red until
-you have an overlay, which is the correct signal: pstack has nothing to route
-until you say what to route to. The message names the file it wanted and the two
+The `live` group is the deliberate exception. It is opt-in precisely because it
+**fails on a machine that is not configured** — you ask for it, so a red result is
+information rather than noise. It validates that every role points at a provider,
+model and effort this machine can actually serve, a check worth nothing if it
+quietly retires itself. The failure message names the file it wanted and the two
 ways to make one.
 
 ### Line endings are the trap in this repo

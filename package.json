@@ -45,6 +45,7 @@
     "deploy": "node scripts/deploy.mjs",
     "test": "node tests/run.mjs",
     "test:keep": "node tests/run.mjs --no-deploy",
+    "test:live": "node tests/run.mjs --no-deploy --live",
     "sync-skills": "python sync-skills.py",
     "capture-seam": "python capture-seam.py",
     "check-upstream": "node scripts/check-upstream.mjs"

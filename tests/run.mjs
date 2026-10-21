@@ -31,13 +31,21 @@ const groups = [
   // (`scripts/check-upstream.mjs`) because a network failure must not fail a
   // code test, and vice versa.
   { name: 'upstream', kind: 'test', file: join(here, 'upstream.test.mjs') },
-  // Reads the REAL `$DSH_HOME/pstack-dsh.json`, so it also covers what the three
-  // hand-run scripts in the old `pstack-verify/` folder used to check.
-  { name: 'live', kind: 'test', file: join(here, 'live.test.mjs') },
+  // Reads the REAL `$DSH_HOME/pstack-dsh.json` and spawns actual children, so it
+  // is the slowest group and the only one that fails on a machine nobody
+  // configured. It is excluded from the default run and opt-in with `--live`
+  // (`npm run test:live`). The default run must be fast and must pass on a fresh
+  // clone; this one answers "is THIS machine's routing correct".
+  { name: 'live', kind: 'test', file: join(here, 'live.test.mjs'), live: true },
 ]
 
 const skipDeploy = process.argv.includes('--no-deploy')
-const selected = groups.filter(group => !(skipDeploy && group.name === 'deploy'))
+const includeLive = process.argv.includes('--live')
+const selected = groups.filter(group => {
+  if (skipDeploy && group.name === 'deploy') return false
+  if (group.live === true && !includeLive) return false
+  return true
+})
 
 const outcomes = []
 for (const group of selected) {
