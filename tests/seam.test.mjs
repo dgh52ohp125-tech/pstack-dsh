@@ -50,6 +50,25 @@ const repoSkills = walk(join(root, 'skills'))
 check('the repo ships a skills tree, so a clone can answer', Object.keys(repoSkills).length > 100, `${Object.keys(repoSkills).length} files`)
 check('a spot-check skill is present', 'poteto-mode/SKILL.md' in repoSkills, Object.keys(repoSkills).slice(0, 3).join(', '))
 
+// --- line endings ----------------------------------------------------------
+//
+// The bug that bit twice, both times only visible in a fresh clone.
+//
+// `.gitattributes` used a per-extension allowlist. The first version omitted
+// `.patch`, so every seam failed to apply on a clone. The second pinned those
+// but omitted `.sh`, `.lock` and `.tsv`, so a stranger's clone carried CRLF in
+// three skills while a local sync produced LF — six files diverged and nothing
+// noticed. The fix is `* text=auto eol=lf`, but this guard must not depend on
+// the fix staying right, so it asserts the property directly.
+const committedOverrides = walk(overridesDir)
+const crlfOffenders = Object.keys(repoSkills).filter(rel => repoSkills[rel].includes(0x0d))
+equal('no committed skill file contains a CR byte, so a clone matches a sync', crlfOffenders.length, 0, crlfOffenders.slice(0, 8).join(', '))
+
+// The seam diffs are the files that fail loudest when converted: a CRLF diff
+// does not apply to the LF tree it came from.
+const patchOffenders = Object.keys(committedOverrides).filter(rel => rel.endsWith('.patch') && committedOverrides[rel].includes(0x0d))
+equal('no seam patch carries CRLF, or it would not apply on a clone', patchOffenders.length, 0, patchOffenders.slice(0, 5).join(', '))
+
 // The re-sync itself. It compares the committed tree to what upstream produces,
 // so it is the guard that replaces "keep skills/ out of git": a hand edit to a
 // mirrored skill now fails here instead of being uncommittable. It needs the
