@@ -1,21 +1,33 @@
-# These files are not interchangeable between line endings.
+# Everything in this repo is text and must stay byte-identical across clones.
 #
 # `overrides/*.patch` are unified diffs with three lines of context. Git on
 # Windows defaults to converting text to CRLF on checkout; a diff converted that
 # way no longer applies to the LF tree it was generated from, and `git apply`
-# fails with "patch does not apply". The seam test catches it, but the failure
-# only shows up in a fresh clone — exactly the situation a sync happens in.
+# fails with "patch does not apply". That failure only shows up in a fresh
+# clone — exactly the situation a sync happens in.
 #
-# `sync-skills.py` renormalises to LF as a second guard, so either alone would
-# be enough. Both are cheap and they fail differently.
-*.patch text eol=lf
-*.md text eol=lf
-*.py text eol=lf
-*.mjs text eol=lf
-*.ts text eol=lf
-*.js text eol=lf
-*.json text eol=lf
-*.yml text eol=lf
+# A per-extension allowlist was wrong twice. First it missed `.patch`, then it
+# missed `.sh`, `.lock` and `.tsv`, and each miss silently made a stranger's sync
+# produce a different tree from the one this repo committed. So the default is now
+# `text eol=lf` for every path, and only genuinely binary content opts out.
+#
+# `sync-skills.py` renormalises to LF as a second guard. Both are cheap and they
+# fail differently, which is the point.
+* text=auto eol=lf
 
-# Built output is compared byte-for-byte by the seam test.
+# Built output is compared byte-for-byte by the seam test. `-text` stops git from
+# touching it at all, which is the only safe setting for a compiled bundle.
 lib/** -text
+
+# Image and archive content: never normalised.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.zip binary
+*.gz binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
