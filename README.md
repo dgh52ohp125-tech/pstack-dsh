@@ -45,11 +45,11 @@ Both are fixed here, and both have regression tests.
 | `lib/` | Built host output. **Committed**, so a deploy needs no toolchain. |
 | `lib/client.js` | Prebuilt Settings UI bundle. Not rebuilt here. |
 | `overrides/` | The hand-made DSH edits to upstream prose, as data (3 whole files, 9 patches). |
-| `skills/` | Mirrored from upstream. **Not committed** — re-sync instead of editing. |
+| `skills/` | Mirrored from upstream and **committed**, so a clone installs with answers intact. Re-sync instead of editing. |
 | `agents/` | Persona files, mirrored from upstream and committed. |
 | `scripts/build.mjs` | Compile `src/*.ts` → `lib/*.js`. No dependencies, no network. |
 | `scripts/deploy.mjs` | Install the build into a DSH profile plugin directory. |
-| `tests/` | 97 checks over catalog, overlay, spawn, skills, seam, imports and the live overlay. |
+| `tests/` | 100 checks over catalog, overlay, spawn, skills, seam, imports and the live overlay. |
 | `capture-seam.py` | Record the local edits to upstream prose as `overrides/`. |
 | `sync-skills.py` | Rebuild `skills/` from upstream plus `overrides/`. |
 
@@ -84,15 +84,31 @@ edited file on disk is inert until restart.
 
 ## Re-adapting after an upstream pstack release
 
-This is the point of the fork. The seam is data, so a sync is mechanical:
+This is the point of the fork. The seam is data, so a sync is mechanical.
+
+**Currently synced to Cursor pstack 0.15.29** (`cursor/plugins`, last upstream
+commit 2026-10-20). That is the newest prose anywhere: the `open-pstack`
+release layer (1.15.0) still carries 0.15.25. To check for a newer one:
+
+```powershell
+git clone --depth 1 --filter=blob:none --sparse https://github.com/cursor/plugins.git <dir>
+cd <dir>; git sparse-checkout set pstack
+(Get-Content pstack\plugin.json -Raw | ConvertFrom-Json).version
+```
+
+If that version is above 0.15.29, sync:
 
 ```powershell
 # 1. Point at the new upstream tree
-python sync-skills.py --upstream <new-upstream>/skills --dest skills
+python sync-skills.py --upstream <dir>/pstack/skills --dest skills
 
 # 2. See whether the new prose still accepts the seam
-python capture-seam.py --upstream <new-upstream>/skills --installed skills
+python capture-seam.py --upstream <dir>/pstack/skills --installed skills
 ```
+
+A non-zero exit from step 1 names every override that no longer applies. That is
+the whole review list: re-read those files by hand, update `overrides/*.patch`,
+and re-run until the exit is 0. Everything else is automated.
 
 `capture-seam.py` reports `added` / `changed` / `upstream-only`. A patch that no
 longer applies is a prose change to re-read — it is the one thing a sync cannot
