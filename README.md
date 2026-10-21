@@ -49,7 +49,7 @@ Both are fixed here, and both have regression tests.
 | `agents/` | Persona files, mirrored from upstream and committed. |
 | `scripts/build.mjs` | Compile `src/*.ts` → `lib/*.js`. No dependencies, no network. |
 | `scripts/deploy.mjs` | Install the build into a DSH profile plugin directory. |
-| `tests/` | 154 checks over catalog, overlay, spawn, the host API contract, skills, seam, upstream and the live overlay. |
+| `tests/` | 156 checks over catalog, overlay, spawn, the host API contract, skills, seam, upstream and the live overlay. |
 | `capture-seam.py` | Record the local edits to upstream prose as `overrides/`. |
 | `sync-skills.py` | Rebuild `skills/` from upstream plus `overrides/`. |
 | `upstream.json` | The upstream release this tree was synced to. `check-upstream` and the `upstream` test group both read it. |
@@ -157,10 +157,31 @@ npm run test:keep # skip the deploy step
 ```
 
 Groups: `build`, `deploy`, `imports`, `catalog`, `overlay`, `spawn`, `contract`,
-`skills`, `seam`, `upstream`, `live` — 154 checks. The `live` group reads your real
+`skills`, `seam`, `upstream`, `live` — 156 checks. The `live` group reads your real
 `$DSH_HOME/pstack-dsh.json` and the provider data this machine ships, so it fails
 when a real role points at a route or an effort the machine cannot serve.
 `npm run test:keep` runs everything except `deploy`.
+
+A check that could not run reports as **skipped**, not failed and not passed. A
+fresh clone has no `upstream/` tree, so the byte-for-byte re-sync check reports
+`checksSkipped: 1` with its reason instead of turning the suite red. That is
+deliberate: a first-time reader who meets a red suite learns to ignore red.
+
+### Line endings are the trap in this repo
+
+Twice now, a fresh clone behaved differently from the machine that made it, and
+both times the cause was Git converting text to CRLF on checkout on Windows.
+
+- Round one: `.gitattributes` pinned `*.md` and friends but not `*.patch`, so
+  every seam diff failed with `patch does not apply` on a clone.
+- Round two: the allowlist still omitted `.sh`, `.lock` and `.tsv`, so three
+  skills came out of a clone with CRLF while a local sync produced LF — six files
+  differed between a stranger's sync and the committed tree.
+
+The rule is now `* text=auto eol=lf` with binary types opted out by name, and
+`tests/seam.test.mjs` asserts the property directly: no committed skill file and
+no seam patch may contain a CR byte. Verified by planting one — the guard names
+`bro/SKILL.md` and fails.
 
 ### The `contract` group: how this fork survives a harness upgrade
 
