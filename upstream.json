@@ -1,10 +1,17 @@
 {
-  "$comment": "The upstream prose this fork was last synced to. scripts/check-upstream.mjs compares this to the live cursor/plugins manifest; tests/upstream.test.mjs fails if the tree, the README or these numbers disagree. Update this file only as part of a real sync.",
+  "$comment": "The upstream prose this fork was last synced to. Two layers feed the committed tree: the Cursor release supplies the words, and the port layer supplies the tool-call rewrites that make them runnable outside Cursor. Sync from the PORT, not from the Cursor source directly: the port edits 84 of the 133 shared files into provider-neutral dispatch contracts, and 9 of this repo's seams patch sentences it already rewrote. scripts/check-upstream.mjs compares this to the live cursor/plugins manifest; tests/upstream.test.mjs fails if the tree, the README or these numbers disagree. Update this file only as part of a real sync.",
   "repo": "cursor/plugins",
   "path": "pstack",
   "version": "0.15.29",
   "syncedAt": "2026-10-21",
   "skillDirs": 63,
   "skillFiles": 162,
-  "upstreamLastCommit": "88d4751 2026-10-20 pstack: restore /sharpen to the original prompt, return only the rewrite (#729)"
+  "upstreamLastCommit": "88d4751 2026-10-20 pstack: restore /sharpen to the original prompt, return only the rewrite (#729)",
+  "port": {
+    "$comment": "The layer the tree is actually built from. Without a pushed branch the prose is not reproducible, which is how the CP1252 corruption reached this repo once already.",
+    "repo": "dgh52ohp125-tech/open-pstack",
+    "branch": "sync/0.15.29",
+    "commit": "f7deeb4",
+    "carries": "0.15.29"
+  }
 }

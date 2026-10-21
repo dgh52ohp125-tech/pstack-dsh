@@ -72,6 +72,16 @@ const walkSkills = dir => {
 walkSkills(skillsDir)
 equal('the committed tree has exactly the pinned file count', allFiles.length, pin.skillFiles)
 
+// The README tells a reader to sync from the PORT, not from the Cursor source.
+// Measured: raw source yields 56 skills and 9 failing seams, the port yields 63
+// and 0. If nobody records which port revision supplied the tree, the next sync
+// silently starts from whatever that branch happens to be, which is how the
+// CP1252 corruption got in once. The pin must name a pushed, inspectable commit.
+check('the pin names the port repository', typeof pin.port?.repo === 'string' && pin.port.repo.includes('/'), JSON.stringify(pin.port?.repo))
+check('the pin names a port branch, not just a version', typeof pin.port?.branch === 'string' && pin.port.branch.length > 0, JSON.stringify(pin.port?.branch))
+check('the pin names the exact port commit', /^[0-9a-f]{7,40}$/.test(pin.port?.commit ?? ''), JSON.stringify(pin.port?.commit))
+equal('the port is pinned to the same release as the source', pin.port?.carries, pin.version)
+
 // --- the README tells the same story ------------------------------------
 
 const readme = readFileSync(join(root, 'README.md'), 'utf8')
