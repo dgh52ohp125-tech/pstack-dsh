@@ -15,7 +15,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, existsSync } 
 import { join, dirname } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
-import { check, equal, summary, results } from './assert.mjs'
+import { check, equal, skip, summary, results } from './assert.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const upstream = process.env.PSTACK_UPSTREAM
@@ -54,10 +54,13 @@ check('a spot-check skill is present', 'poteto-mode/SKILL.md' in repoSkills, Obj
 // so it is the guard that replaces "keep skills/ out of git": a hand edit to a
 // mirrored skill now fails here instead of being uncommittable. It needs the
 // upstream tree, which is not vendored — a clone on another machine must still
-// be able to run the suite, so an absent upstream is a skip with a reason, not a
-// pass and not a failure.
+// be able to run the suite, so an absent upstream is a SKIP with a reason.
+//
+// `check(..., false, ...)` was wrong here: it recorded a real failure, so every
+// fresh clone reported `seam: fail` and a first-time reader was greeted by a red
+// suite over a check that had deliberately not run. A skip is its own outcome.
 if (!existsSync(upstream)) {
-  check('upstream tree is available for the re-sync check', false, `skipped, not run: missing ${upstream} (set PSTACK_UPSTREAM to a pstack skills tree to enable this check)`)
+  skip('upstream tree is available for the re-sync check', `missing ${upstream} — set PSTACK_UPSTREAM to a pstack skills tree to enable this check`)
 } else {
   const temp = mkdtempSync(join(tmpdir(), 'pstack-resync-'))
   const dest = join(temp, 'skills')

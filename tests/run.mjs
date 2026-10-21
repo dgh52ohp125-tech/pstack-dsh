@@ -62,6 +62,8 @@ for (const group of selected) {
       const parsed = JSON.parse(stdout.slice(firstBrace, lastBrace + 1))
       if (parsed && typeof parsed === 'object' && typeof parsed.failed === 'number') {
         summary = { total: parsed.total, passed: parsed.passed, failed: parsed.failed, failures: parsed.failures }
+        if (typeof parsed.skipped === 'number' && parsed.skipped > 0) summary.skipped = parsed.skipped
+        if (Array.isArray(parsed.skipReasons) && parsed.skipReasons.length > 0) summary.skipReasons = parsed.skipReasons
       }
     } catch { /* not a JSON report (deploy/build) */ }
   }
@@ -78,6 +80,8 @@ for (const group of selected) {
 const failed = outcomes.filter(outcome => outcome.status !== 'pass')
 const totalChecks = outcomes.reduce((sum, outcome) => sum + (outcome.summary?.total ?? 0), 0)
 const failedChecks = outcomes.reduce((sum, outcome) => sum + (outcome.summary?.failed ?? 0), 0)
+const skippedChecks = outcomes.reduce((sum, outcome) => sum + (outcome.summary?.skipped ?? 0), 0)
+const skipReasons = outcomes.flatMap(outcome => outcome.summary?.skipReasons ?? [])
 
 const report = {
   groups: outcomes.map(outcome => ({
@@ -88,8 +92,12 @@ const report = {
   })),
   groupsPassed: outcomes.length - failed.length,
   groupsFailed: failed.length,
-  checksPassed: totalChecks - failedChecks,
+  checksPassed: totalChecks - failedChecks - skippedChecks,
   checksFailed: failedChecks,
+  // Reported, never silent. A clone without an upstream tree still runs green,
+  // but it says which guard did not run so nobody reads a skip as a success.
+  checksSkipped: skippedChecks,
+  ...skipReasons.length === 0 ? {} : { skipReasons },
 }
 console.log(JSON.stringify(report, null, 2))
 if (failed.length > 0) process.exitCode = 1
