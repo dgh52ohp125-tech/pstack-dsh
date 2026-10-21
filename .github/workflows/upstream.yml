@@ -1,0 +1,95 @@
+# Watch the upstream pstack prose and open an issue when it moves.
+#
+# A scheduled job that fails silently is worse than no job, so this one reports
+# its outcome to the run summary and only opens an issue when the upstream
+# version is genuinely newer. A network failure logs and exits 0: it is not
+# evidence of a release.
+#
+# The comparison itself lives in `scripts/upstream.mjs` and is unit-tested by
+# `tests/upstream.test.mjs`, so this file stays a thin shell.
+name: upstream
+
+on:
+  schedule:
+    # Daily at 06:17 UTC. Off the hour so it does not queue behind every other
+    # project's midnight cron.
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # --json always exits 0, so a network failure cannot fail the job.
+      - name: Compare the pin against live upstream
+        run: node scripts/check-upstream.mjs --json > upstream-report.json
+
+      - name: Report
+        id: report
+        run: |
+          node -e '
+            const fs = require("node:fs")
+            const report = JSON.parse(fs.readFileSync("upstream-report.json", "utf8"))
+            for (const key of ["status", "pinned", "live", "message"]) {
+              fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${report[key] ?? ""}\n`)
+            }
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `**${report.status}** — ${report.message}\n`)
+            console.log(report.message)
+          '
+
+      - name: Open an issue when a sync is due
+        if: steps.report.outputs.status == 'behind'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PINNED: ${{ steps.report.outputs.pinned }}
+          LIVE: ${{ steps.report.outputs.live }}
+        run: |
+          set -euo pipefail
+
+          # One issue per upstream release. The version is in the title and the
+          # match is exact, so a second run of the same release finds the
+          # existing issue instead of filing a duplicate every day.
+          existing=$(gh issue list --state open --search "in:title Sync upstream pstack ${LIVE}" --json number,title \
+            --jq "[.[] | select(.title == \"Sync upstream pstack ${LIVE}\") | .number][0] // empty")
+
+          if [ -n "$existing" ]; then
+            echo "Already tracking this release in #${existing}"
+            exit 0
+          fi
+
+          {
+            echo "Upstream \`cursor/plugins\` moved to **${LIVE}**; this fork is synced to **${PINNED}**."
+            echo
+            echo "The prose sync is mechanical — the seam lives in \`overrides/\` as data, so a"
+            echo "re-sync is a file copy plus whatever patches upstream's prose change broke."
+            echo
+            echo '```powershell'
+            echo 'git clone --depth 1 --filter=blob:none --sparse https://github.com/cursor/plugins.git ../cursor-plugins'
+            echo 'cd ../cursor-plugins; git sparse-checkout set pstack'
+            echo
+            echo 'python sync-skills.py --upstream ../cursor-plugins/pstack/skills --dest skills'
+            echo 'python capture-seam.py --upstream ../cursor-plugins/pstack/skills --installed skills'
+            echo '```'
+            echo
+            echo 'A non-zero exit from `sync-skills.py` names every override whose prose moved.'
+            echo 'That list is the whole review: re-read those files, update `overrides/*.patch`,'
+            echo 'and re-run until the exit is 0.'
+            echo
+            echo 'Then set `version`, `skillDirs` and `skillFiles` in `upstream.json`, update the'
+            echo "README's \"Currently synced to\" line, and run \`npm test\`. The \`upstream\` test"
+            echo 'group fails if you miss one of those.'
+            echo
+            echo '_Raised automatically by `.github/workflows/upstream.yml`._'
+          } > body.md
+
+          gh issue create --title "Sync upstream pstack ${LIVE}" --body-file body.md

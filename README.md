@@ -52,6 +52,9 @@ Both are fixed here, and both have regression tests.
 | `tests/` | 100 checks over catalog, overlay, spawn, skills, seam, imports and the live overlay. |
 | `capture-seam.py` | Record the local edits to upstream prose as `overrides/`. |
 | `sync-skills.py` | Rebuild `skills/` from upstream plus `overrides/`. |
+| `upstream.json` | The upstream release this tree was synced to. `check-upstream` and the `upstream` test group both read it. |
+| `scripts/check-upstream.mjs` | Ask the live `cursor/plugins` manifest whether a newer release exists. |
+| `.github/workflows/upstream.yml` | Runs that check daily and opens one issue per new upstream version. |
 
 ## Install
 
@@ -88,27 +91,37 @@ This is the point of the fork. The seam is data, so a sync is mechanical.
 
 **Currently synced to Cursor pstack 0.15.29** (`cursor/plugins`, last upstream
 commit 2026-10-20). That is the newest prose anywhere: the `open-pstack`
-release layer (1.15.0) still carries 0.15.25. To check for a newer one:
+release layer (1.15.0) still carries 0.15.25.
+
+You do not have to watch for a new release by hand. A daily GitHub Action
+(`.github/workflows/upstream.yml`) compares `upstream.json` against the live
+manifest and opens one issue per new version. To ask the same question locally:
+
+```powershell
+npm run check-upstream            # prints the answer, exit 1 if a sync is due
+npm run check-upstream -- --json  # machine-readable
+```
+
+To sync by hand:
 
 ```powershell
 git clone --depth 1 --filter=blob:none --sparse https://github.com/cursor/plugins.git <dir>
 cd <dir>; git sparse-checkout set pstack
-(Get-Content pstack\plugin.json -Raw | ConvertFrom-Json).version
-```
+(Get-Content pstack\plugin.json -Raw | ConvertFrom-Json).version   # what upstream is at now
 
-If that version is above 0.15.29, sync:
-
-```powershell
-# 1. Point at the new upstream tree
 python sync-skills.py --upstream <dir>/pstack/skills --dest skills
-
-# 2. See whether the new prose still accepts the seam
 python capture-seam.py --upstream <dir>/pstack/skills --installed skills
 ```
 
-A non-zero exit from step 1 names every override that no longer applies. That is
-the whole review list: re-read those files by hand, update `overrides/*.patch`,
-and re-run until the exit is 0. Everything else is automated.
+A non-zero exit from `sync-skills.py` names every override that no longer
+applies. That is the whole review list: re-read those files by hand, update
+`overrides/*.patch`, and re-run until the exit is 0. Everything else is
+automated.
+
+Then set `version`, `skillDirs` and `skillFiles` in `upstream.json` and update
+the "Currently synced to" line above. `npm test` fails until you do — the
+`upstream` group cross-checks the pin, the tree, the override counts and the
+README against each other, so a half-finished sync cannot ship.
 
 `capture-seam.py` reports `added` / `changed` / `upstream-only`. A patch that no
 longer applies is a prose change to re-read — it is the one thing a sync cannot

@@ -46,7 +46,8 @@
     "test": "node tests/run.mjs",
     "test:keep": "node tests/run.mjs --no-deploy",
     "sync-skills": "python sync-skills.py",
-    "capture-seam": "python capture-seam.py"
+    "capture-seam": "python capture-seam.py",
+    "check-upstream": "node scripts/check-upstream.mjs"
   },
   "engines": {
     "node": "^22.19.0 || >=24"

@@ -22,6 +22,10 @@ const groups = [
   { name: 'spawn', kind: 'test', file: join(here, 'spawn.test.mjs') },
   { name: 'skills', kind: 'test', file: join(here, 'skills.test.mjs') },
   { name: 'seam', kind: 'test', file: join(here, 'seam.test.mjs') },
+  // Offline only. The live "has upstream moved?" check is a separate script
+  // (`scripts/check-upstream.mjs`) because a network failure must not fail a
+  // code test, and vice versa.
+  { name: 'upstream', kind: 'test', file: join(here, 'upstream.test.mjs') },
   // Reads the REAL `$DSH_HOME/pstack-dsh.json`, so it also covers what the three
   // hand-run scripts in the old `pstack-verify/` folder used to check.
   { name: 'live', kind: 'test', file: join(here, 'live.test.mjs') },
