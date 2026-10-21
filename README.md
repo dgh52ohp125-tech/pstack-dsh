@@ -162,10 +162,17 @@ Groups: `build`, `deploy`, `imports`, `catalog`, `overlay`, `spawn`, `contract`,
 when a real role points at a route or an effort the machine cannot serve.
 `npm run test:keep` runs everything except `deploy`.
 
-A check that could not run reports as **skipped**, not failed and not passed. A
-fresh clone has no `upstream/` tree, so the byte-for-byte re-sync check reports
-`checksSkipped: 1` with its reason instead of turning the suite red. That is
-deliberate: a first-time reader who meets a red suite learns to ignore red.
+A check whose input is genuinely optional reports as **skipped** — not failed,
+not passed. A fresh clone has no `upstream/` tree, so the byte-for-byte re-sync
+check reports `checksSkipped: 1` with its reason instead of turning the suite red.
+
+The `live` group is the deliberate exception, and **it fails on a machine that is
+not configured**. It validates that every role points at a provider, model and
+effort this machine can actually serve — a check that is worth nothing if it
+quietly retires itself. Run `npm test` on a fresh machine and it goes red until
+you have an overlay, which is the correct signal: pstack has nothing to route
+until you say what to route to. The message names the file it wanted and the two
+ways to make one.
 
 ### Line endings are the trap in this repo
 
