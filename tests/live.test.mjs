@@ -26,8 +26,27 @@ import { check, equal, summary, results } from './assert.mjs'
 const dshHome = process.env.DSH_HOME ?? join(homedir(), '.dsh')
 const overlayPath = join(dshHome, 'pstack-dsh.json')
 
+// A missing overlay FAILS on purpose, and this is the one check in the suite that
+// does. Everywhere else a missing input is a skip, because the input is optional.
+// This one is the whole point of the group: it validates the routes and efforts a
+// real install is configured with. A skip would let a misconfigured machine run
+// green, which is the exact failure a user discovers by spawning into a dead role.
+//
+// So it fails — but it must fail USEFULLY. The message names the file it wanted,
+// the two ways to get one, and the flag that asks for the check on purpose. A
+// reader should be able to fix it without opening this file.
 if (!existsSync(overlayPath)) {
-  check('a real overlay file exists', false, `no ${overlayPath}; nothing to verify against`)
+  check(
+    'a real overlay file exists, so the configured routes can be verified',
+    false,
+    [
+      `no overlay at ${overlayPath}`,
+      'This group checks a real install: that every role points at a provider, model and effort this machine can actually serve.',
+      'It is meant to fail until you have one — a silent skip would hide a broken route.',
+      'Make one by running /setup-pstack, or by saving any role mapping in Settings -> pstack.',
+      'Point at a different profile with DSH_HOME=<dir>.',
+    ].join(' '),
+  )
   const report = summary('live')
   console.log(JSON.stringify({ ...report, checks: results }, null, 2))
   process.exitCode = 1
@@ -92,7 +111,18 @@ if (!existsSync(overlayPath)) {
   })()
 
   if (zenEfforts === undefined || codexEfforts === undefined) {
-    check('provider effort data is available', false, `missing ${zenEfforts === undefined ? zenPath : codexPath}`)
+    // Same reasoning as the missing overlay: fail, but say what to do. These two
+    // files are the provider ladders every mapped effort is checked against. A
+    // skip here would silently retire the check that a role's effort is legal.
+    check(
+      'provider effort data is available, so a role effort can be checked',
+      false,
+      [
+        `missing ${zenEfforts === undefined ? zenPath : codexPath}`,
+        'Without it this group cannot tell a legal reasoning effort from one the provider rejects.',
+        'Install the matching provider (opencode2dsh and/or openai-codex) for this profile, or map roles to providers you have.',
+      ].join(' '),
+    )
   } else {
     const wrong = []
     const unverifiable = []
