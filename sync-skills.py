@@ -57,6 +57,36 @@ def read_lf(path):
         text = raw.replace(b'\r\n', b'\n').decode('utf-8')
     except UnicodeDecodeError as exc:
         raise SystemExit(f'invalid UTF-8 in {path}: {exc}')
+    return repair_mojibake(text)
+
+
+# The same corruption keeps coming back, so it is repaired rather than trusted.
+# A UTF-8 file read as CP1252 and written back as UTF-8 turns each multi-byte
+# character into two or three junk characters: U+2192 (->) becomes U+00E2 U+2020
+# U+2019, which displays as "â†’". It happened once in the 0.15.20 sync and again
+# in a hand-made 0.15.29 mirror branch, so normalizing it here means a re-sync
+# produces correct prose regardless of which tree it is handed.
+#
+# Only sequences that cannot be legitimate text are touched: every pattern below
+# is a CP1252 reading of UTF-8 lead bytes, which never occurs in real prose.
+MOJIBAKE = [
+    ('\u00e2\u2020\u2019', '\u2192'),  # ->  (U+2192 rightwards arrow)
+    ('\u00e2\u2020\u0090', '\u2190'),  # <-  (U+2190 leftwards arrow)
+    ('\u00e2\u20ac\u201d', '\u2014'),  # --  (U+2014 em dash)
+    ('\u00e2\u20ac\u201c', '\u2013'),  # -   (U+2013 en dash)
+    ('\u00e2\u20ac\u2122', '\u2019'),  # '   (U+2019 right single quote)
+    ('\u00e2\u20ac\u0153', '\u201c'),  # "   (U+201C left double quote)
+    ('\u00e2\u20ac\u009d', '\u201d'),  # "   (U+201D right double quote)
+    ('\u00e2\u20ac\u00a6', '\u2026'),  # ... (U+2026 horizontal ellipsis)
+    ('\u00c3\u00a9', '\u00e9'),        # e-acute
+    ('\u00c3\u00a0', '\u00e0'),        # a-grave
+    ('\u00c2\u00a0', '\u00a0'),        # non-breaking space
+]
+
+
+def repair_mojibake(text):
+    for broken, fixed in MOJIBAKE:
+        text = text.replace(broken, fixed)
     return text
 
 

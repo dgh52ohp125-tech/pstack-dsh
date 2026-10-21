@@ -89,34 +89,52 @@ edited file on disk is inert until restart.
 
 This is the point of the fork. The seam is data, so a sync is mechanical.
 
-**Currently synced to Cursor pstack 0.15.29** (`cursor/plugins`, last upstream
-commit 2026-10-20). That is the newest prose anywhere: the `open-pstack`
-release layer (1.15.0) still carries 0.15.25.
+**Currently synced to Cursor pstack 0.15.29.** Two layers sit above this fork,
+and knowing which one to sync from is the whole trick:
 
-You do not have to watch for a new release by hand. A daily GitHub Action
-(`.github/workflows/upstream.yml`) compares `upstream.json` against the live
-manifest and opens one issue per new version. To ask the same question locally:
+| Layer | What it is | Sync from it? |
+|---|---|---|
+| `cursor/plugins/pstack` | Lauren Tan's original. Written for Cursor's tools. | **No** — see below |
+| `open-pstack` (`sync/0.15.29`) | A port that rewrites Cursor tool calls into provider-neutral dispatch contracts. | **Yes** |
+| this repo | `open-pstack`'s prose plus the DSH seam in `overrides/`. | — |
+
+Syncing straight from `cursor/plugins` fails: nine of the seams are patches
+against sentences the middle layer already rewrote, and the tree comes out 7
+skills short (`babysit`, `deslop`, `fix-ci`, `fix-merge-conflicts`,
+`get-pr-comments`, `make-pr-easy-to-review`,
+`thermo-nuclear-code-quality-review`, `what-did-i-get-done` are vendored by the
+middle layer). Measured, not assumed: raw source gives `56 skills, 9 overrides
+failed`; the port tree gives `63 skills, 0 failed`.
+
+So the pin records the **port** revision, and the port in turn records which
+Cursor release it carries. You do not have to watch either by hand: a daily
+GitHub Action (`.github/workflows/upstream.yml`) compares `upstream.json`
+against the live `cursor/plugins` manifest and opens one issue per new version.
+To ask the same question locally:
 
 ```powershell
 npm run check-upstream            # prints the answer, exit 1 if a sync is due
 npm run check-upstream -- --json  # machine-readable
 ```
 
-To sync by hand:
+When it reports a new version, sync in two steps:
 
 ```powershell
-git clone --depth 1 --filter=blob:none --sparse https://github.com/cursor/plugins.git <dir>
-cd <dir>; git sparse-checkout set pstack
-(Get-Content pstack\plugin.json -Raw | ConvertFrom-Json).version   # what upstream is at now
+# 1. Take the new Cursor release into the middle layer and push a sync branch.
+#    (That repo has its own sync tooling; follow its UPSTREAM.md. The branch is
+#    what makes the prose reproducible — an uncommitted mirror is not.)
 
-python sync-skills.py --upstream <dir>/pstack/skills --dest skills
-python capture-seam.py --upstream <dir>/pstack/skills --installed skills
+# 2. Rebuild this repo's skills from that pushed branch.
+git clone --depth 1 -b sync/0.15.29 https://github.com/dgh52ohp125-tech/open-pstack.git <dir>
+python sync-skills.py --upstream <dir>/plugins/pstack/skills --dest skills
+python capture-seam.py --upstream <dir>/plugins/pstack/skills --installed skills
 ```
 
 A non-zero exit from `sync-skills.py` names every override that no longer
 applies. That is the whole review list: re-read those files by hand, update
 `overrides/*.patch`, and re-run until the exit is 0. Everything else is
-automated.
+automated. Mojibake is repaired automatically by `sync-skills.py`, because the
+same UTF-8-read-as-CP1252 corruption has appeared twice in this pipeline.
 
 Then set `version`, `skillDirs` and `skillFiles` in `upstream.json` and update
 the "Currently synced to" line above. `npm test` fails until you do — the
