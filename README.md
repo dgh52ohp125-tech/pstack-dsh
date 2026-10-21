@@ -49,7 +49,7 @@ Both are fixed here, and both have regression tests.
 | `agents/` | Persona files, mirrored from upstream and committed. |
 | `scripts/build.mjs` | Compile `src/*.ts` → `lib/*.js`. No dependencies, no network. |
 | `scripts/deploy.mjs` | Install the build into a DSH profile plugin directory. |
-| `tests/` | 100 checks over catalog, overlay, spawn, skills, seam, imports and the live overlay. |
+| `tests/` | 154 checks over catalog, overlay, spawn, the host API contract, skills, seam, upstream and the live overlay. |
 | `capture-seam.py` | Record the local edits to upstream prose as `overrides/`. |
 | `sync-skills.py` | Rebuild `skills/` from upstream plus `overrides/`. |
 | `upstream.json` | The upstream release this tree was synced to. `check-upstream` and the `upstream` test group both read it. |
@@ -156,11 +156,36 @@ npm test          # build, deploy, then run every group
 npm run test:keep # skip the deploy step
 ```
 
-Groups: `build`, `deploy`, `imports`, `catalog`, `overlay`, `spawn`, `skills`,
-`seam`, `live` — 100 checks. The `live` group reads your real
+Groups: `build`, `deploy`, `imports`, `catalog`, `overlay`, `spawn`, `contract`,
+`skills`, `seam`, `upstream`, `live` — 154 checks. The `live` group reads your real
 `$DSH_HOME/pstack-dsh.json` and the provider data this machine ships, so it fails
 when a real role points at a route or an effort the machine cannot serve.
 `npm run test:keep` runs everything except `deploy`.
+
+### The `contract` group: how this fork survives a harness upgrade
+
+The failure this fork exists to prevent is not "pstack prose is stale". It is
+"DSH changed its subagent API and `pstack_spawn` threw in someone's session".
+
+`src/subagent-compat.ts` already survives a **renamed** method: it probes
+`startActivation`, `start`, `startContinuable`, `startOneShot` in order and adapts
+whatever it finds, so adding a future shape is one line there.
+
+It cannot survive a changed **payload**. The plugin builds a request object and
+hands it over; if the host renames a field or adds a required one, nothing fails
+until a real spawn is attempted.
+
+So `tests/contract.test.mjs` reads the host's own generated contract —
+`@deepseek-ai/dsh-subagent/lib/typert.host.js`, which exports `TYPERT` with full
+TypeScript declarations for `SubagentActivationSpec`, `SubagentStartRequest`,
+`SubagentActivation` and the method list — and asserts that every field the plugin
+sends still exists, that every field the host requires is still supplied, and that
+the newest probed method is still a real method. It costs nothing at runtime and
+cannot disagree with the installed host, because it *is* the installed host.
+
+Proven by simulation, not assertion: a fake contract with `startActivation`
+renamed to `startDelegation` and `signal` renamed to `cancellation` fails two
+checks and names the unsupplied field — before any spawn is attempted.
 
 Tests load the **deployed** tree, not `src/`, because the loader resolves bare
 `@deepseek-ai/*` specifiers only from inside the profile's `node_modules`.

@@ -20,6 +20,11 @@ const groups = [
   { name: 'catalog', kind: 'test', file: join(here, 'catalog.test.mjs') },
   { name: 'overlay', kind: 'test', file: join(here, 'overlay.test.mjs') },
   { name: 'spawn', kind: 'test', file: join(here, 'spawn.test.mjs') },
+  // Reads the host's own generated API contract, so a DSH release that renames a
+  // start method or adds a required request field fails HERE instead of in a
+  // user's session. `spawn.test.mjs` proves the plumbing against fixtures; this
+  // proves the fixtures still match what the installed host actually declares.
+  { name: 'contract', kind: 'test', file: join(here, 'contract.test.mjs') },
   { name: 'skills', kind: 'test', file: join(here, 'skills.test.mjs') },
   { name: 'seam', kind: 'test', file: join(here, 'seam.test.mjs') },
   // Offline only. The live "has upstream moved?" check is a separate script
